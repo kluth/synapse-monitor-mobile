@@ -1,0 +1,14 @@
+{
+  "id": "neuron-123",
+  "name": "User Service",
+  "type": "cortical",
+  "status": "active",
+  "activationThreshold": 0.75,
+  "processedSignalCount": 1250,
+  "averageProcessingTimeMs": 125,
+  "lastActiveAt": "2025-11-07T12:00:00Z",
+  "description": "Handles user authentication",
+  "metadata": {
+    "version": "1.0.0"
+  }
+}
