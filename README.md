@@ -162,27 +162,160 @@ For implementation roadmap, see [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md)
 
 This project enforces **Test-Driven Development (TDD)** as a non-negotiable standard.
 
-  * **Unit Tests:** All business logic (Use Cases, State Notifiers) must be 100% covered by unit tests *before* the feature code is written.
-  * **Widget Tests:** All UI components must be tested for correct rendering and interaction.
-  * **Integration Tests:** End-to-end tests simulate the connection to the (mocked) Synapse backend and verify the data flow through the entire application.
+### TDD Workflow: 🔴 RED → 🟢 GREEN → 🔵 REFACTOR
 
-Run all tests via:
+1. **🔴 RED**: Write failing tests FIRST
+2. **🟢 GREEN**: Write minimum code to pass tests
+3. **🔵 REFACTOR**: Improve code while keeping tests green
+
+### Test Coverage Requirements
+- **Minimum coverage**: 85%
+- **Unit Tests**: All business logic
+- **Widget Tests**: All UI components
+- **Integration Tests**: Critical user flows
+
+### Quick Commands
+```bash
+# Run all tests
+flutter test
+
+# Run tests with coverage
+flutter test --coverage
+
+# Using Makefile
+make test           # Run all tests
+make test-watch     # Watch mode
+make coverage       # Generate coverage report
+```
+
+## 🤖 CI/CD & Automation
+
+### GitHub Workflows
+
+This project includes comprehensive CI/CD pipelines:
+
+#### 1. **CI/CD Pipeline** (`.github/workflows/ci.yml`)
+Runs on every push and PR:
+- ✅ Code quality (formatting, linting, metrics)
+- ✅ Code generation verification
+- ✅ Unit, widget, and integration tests
+- ✅ 85% coverage enforcement
+- ✅ Security scanning (dependencies, secrets)
+- ✅ Multi-platform builds (Android, iOS, Web, Desktop)
+- ✅ Documentation generation
+- ✅ Performance analysis
+
+#### 2. **Release Pipeline** (`.github/workflows/release.yml`)
+Automated releases on git tags:
+- 📦 Build production APK/AAB
+- 🍎 Build iOS IPA
+- 🌐 Build and deploy Web
+- 🚀 Deploy to Google Play (internal testing)
+- 🚀 Deploy to App Store Connect
+
+#### 3. **Dependency Updates** (`.github/workflows/dependency-update.yml`)
+Weekly automated updates:
+- 📦 Flutter/Dart dependency updates
+- 🔒 Security vulnerability scanning
+- 🤖 Auto-create PRs for updates
+- 📧 Notifications for Flutter version updates
+
+#### 4. **Code Review Automation** (`.github/workflows/code-review.yml`)
+On every PR:
+- 📊 PR size analysis
+- 🧪 TDD compliance checking
+- 📚 Documentation coverage
+- 🏷️ Auto-labeling
+- 💡 Best practice suggestions
+
+### Makefile Commands
+
+Over 40 commands for development:
 
 ```bash
-flutter test
+# Show all commands
+make help
+
+# Setup
+make setup          # Initial setup
+make install-tools  # Install dev tools
+
+# Testing (TDD)
+make test           # Run all tests
+make test-watch     # Watch mode
+make coverage       # Coverage report
+make tdd-red        # Create test file
+make tdd-green      # Run tests
+make tdd-refactor   # Refactor with tests
+
+# Code Quality
+make analyze        # Static analysis
+make format         # Format code
+make lint           # All linters
+make metrics        # Code metrics
+
+# Building
+make build-android  # Build APK
+make build-ios      # Build iOS
+make build-web      # Build web
+make build-all      # Build all
+
+# Quick Checks
+make quick-check    # Fast quality check
+make ready-for-pr   # Prepare for PR
+make ci-local       # Simulate CI locally
 ```
 
 ## 🤝 Contributing
 
-We welcome contributions\! Please adhere to the following guidelines, which are **mandatory** for this repository:
+We welcome contributions! This project has **mandatory** standards:
 
-1.  **Clean Code:** Strictly follow the [Effective Dart](https://dart.dev/guides/language/effective-dart) guidelines and the project's defined linting rules.
-2.  **TDD is Required:** No feature code will be merged without accompanying (and pre-written) tests.
-3.  **Critical Planning:** For every new feature or significant change, open a "Planning Issue" to discuss the architecture and approach *before* implementation begins.
-4.  **Pull Requests (PRs):**
-      * PRs must include proof of TDD (i.e., comprehensive tests).
-      * PRs must pass the CI pipeline (tests, linter).
-      * PRs must be reviewed and approved by at least one other team member.
+### Before Contributing
+
+1. Read [CONTRIBUTING.md](CONTRIBUTING.md) - Complete guidelines
+2. Read [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) - Community standards
+3. Check existing issues and PRs
+
+### Contribution Standards
+
+1. **🧪 TDD is Required**: Tests MUST be written before code
+2. **🏗️ Clean Architecture**: Follow layer separation strictly
+3. **🎨 Code Style**: Follow [Effective Dart](https://dart.dev/guides/language/effective-dart)
+4. **📚 Documentation**: Document all public APIs
+5. **✅ Quality**: Pass all CI checks
+
+### Quick Start for Contributors
+
+```bash
+# Fork and clone
+git clone https://github.com/YOUR_USERNAME/synapse-monitor-mobile.git
+cd synapse-monitor-mobile
+
+# Setup
+make setup
+
+# Create feature branch
+git checkout -b feature/your-feature
+
+# TDD Workflow
+make tdd-red        # Write failing tests
+make tdd-green      # Implement feature
+make tdd-refactor   # Improve code
+
+# Before PR
+make ready-for-pr   # Run all checks
+
+# Create PR using the template
+```
+
+### Pull Request Process
+
+1. ✅ Use PR template
+2. ✅ Include TDD evidence (tests written first)
+3. ✅ Ensure 85%+ coverage
+4. ✅ Pass all CI checks
+5. ✅ Address review feedback
+6. ✅ Get approval from maintainers
 
 ## 📄 License
 
