@@ -21,25 +21,17 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 🔧 Setup Flutter SDK
-        uses: actions/checkout@v4
-        with:
-          repository: 'flutter/flutter'
-          ref: '3.24.0'
-          path: 'flutter-sdk'
-
-      - name: 📦 Cache Flutter dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            flutter-sdk
-            ~/.pub-cache
-          key: ${{ runner.os }}-flutter-3.24.0-${{ hashFiles('**/pubspec.lock') }}
-
-      - name: ⚙️ Add Flutter to PATH
+      - name: 🔧 Fetch base branch
+        if: github.event_name == 'pull_request'
         run: |
-          echo "$GITHUB_WORKSPACE/flutter-sdk/bin" >> $GITHUB_PATH
-          echo "$GITHUB_WORKSPACE/flutter-sdk/bin/cache/dart-sdk/bin" >> $GITHUB_PATH
+          git fetch origin ${{ github.base_ref }}:${{ github.base_ref }}
+
+      - name: 🔧 Setup Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          cache: true
 
       - name: 📦 Get dependencies
         run: flutter pub get
@@ -48,21 +40,21 @@ jobs:
         id: review
         run: |
           # Check PR size
-          FILES_CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | wc -l)
-          LINES_CHANGED=$(git diff --shortstat origin/${{ github.base_ref }}...HEAD | grep -oP '\d+(?= insertions)' || echo "0")
+          FILES_CHANGED=$(git diff --name-only ${{ github.base_ref }}...HEAD | wc -l)
+          LINES_CHANGED=$(git diff --shortstat ${{ github.base_ref }}...HEAD | grep -oP '\d+(?= insertions)' || echo "0")
 
           echo "files_changed=$FILES_CHANGED" >> $GITHUB_OUTPUT
           echo "lines_changed=$LINES_CHANGED" >> $GITHUB_OUTPUT
 
           # Check for TDD compliance
-          TEST_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep "_test.dart" | wc -l)
-          CODE_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E "lib/.*\.dart$" | grep -v ".freezed.dart" | grep -v ".g.dart" | wc -l)
+          TEST_FILES=$(git diff --name-only ${{ github.base_ref }}...HEAD | grep "_test.dart" | wc -l)
+          CODE_FILES=$(git diff --name-only ${{ github.base_ref }}...HEAD | grep -E "lib/.*\.dart$" | grep -v ".freezed.dart" | grep -v ".g.dart" | wc -l)
 
           echo "test_files=$TEST_FILES" >> $GITHUB_OUTPUT
           echo "code_files=$CODE_FILES" >> $GITHUB_OUTPUT
 
           # Check for documentation
-          DOC_COMMENTS=$(git diff origin/${{ github.base_ref }}...HEAD -- lib/ | grep -c "///" || echo "0")
+          DOC_COMMENTS=$(git diff ${{ github.base_ref }}...HEAD -- lib/ | grep -c "///" || echo "0")
           echo "doc_comments=$DOC_COMMENTS" >> $GITHUB_OUTPUT
 
       - name: 📊 Comment on PR
@@ -205,24 +197,11 @@ jobs:
         uses: actions/checkout@v4
 
       - name: 🔧 Setup Flutter SDK
-        uses: actions/checkout@v4
+        uses: subosito/flutter-action@v2
         with:
-          repository: 'flutter/flutter'
-          ref: '3.24.0'
-          path: 'flutter-sdk'
-
-      - name: 📦 Cache Flutter dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            flutter-sdk
-            ~/.pub-cache
-          key: ${{ runner.os }}-flutter-3.24.0-${{ hashFiles('**/pubspec.lock') }}
-
-      - name: ⚙️ Add Flutter to PATH
-        run: |
-          echo "$GITHUB_WORKSPACE/flutter-sdk/bin" >> $GITHUB_PATH
-          echo "$GITHUB_WORKSPACE/flutter-sdk/bin/cache/dart-sdk/bin" >> $GITHUB_PATH
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          cache: true
 
       - name: 📦 Get dependencies
         run: flutter pub get
@@ -277,25 +256,17 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 🔧 Setup Flutter SDK
-        uses: actions/checkout@v4
-        with:
-          repository: 'flutter/flutter'
-          ref: '3.24.0'
-          path: 'flutter-sdk'
-
-      - name: 📦 Cache Flutter dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            flutter-sdk
-            ~/.pub-cache
-          key: ${{ runner.os }}-flutter-3.24.0-${{ hashFiles('**/pubspec.lock') }}
-
-      - name: ⚙️ Add Flutter to PATH
+      - name: 🔧 Fetch base branch
+        if: github.event_name == 'pull_request'
         run: |
-          echo "$GITHUB_WORKSPACE/flutter-sdk/bin" >> $GITHUB_PATH
-          echo "$GITHUB_WORKSPACE/flutter-sdk/bin/cache/dart-sdk/bin" >> $GITHUB_PATH
+          git fetch origin ${{ github.base_ref }}:${{ github.base_ref }}
+
+      - name: 🔧 Setup Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          cache: true
 
       - name: 📦 Get dependencies
         run: flutter pub get
@@ -304,19 +275,19 @@ jobs:
         id: check
         run: |
           # Check for print statements (should use logger)
-          PRINT_COUNT=$(git diff origin/${{ github.base_ref }}...HEAD | grep -c "print(" || echo "0")
+          PRINT_COUNT=$(git diff ${{ github.base_ref }}...HEAD | grep -c "print(" || echo "0")
           echo "print_statements=$PRINT_COUNT" >> $GITHUB_OUTPUT
 
           # Check for TODO comments
-          TODO_COUNT=$(git diff origin/${{ github.base_ref }}...HEAD | grep -c "// TODO" || echo "0")
+          TODO_COUNT=$(git diff ${{ github.base_ref }}...HEAD | grep -c "// TODO" || echo "0")
           echo "todo_comments=$TODO_COUNT" >> $GITHUB_OUTPUT
 
           # Check for hardcoded strings
-          HARDCODED=$(git diff origin/${{ github.base_ref }}...HEAD -- lib/ | grep -c "Text('" || echo "0")
+          HARDCODED=$(git diff ${{ github.base_ref }}...HEAD -- lib/ | grep -c "Text('" || echo "0")
           echo "hardcoded_strings=$HARDCODED" >> $GITHUB_OUTPUT
 
           # Check for BuildContext used in async gaps
-          ASYNC_GAP=$(git diff origin/${{ github.base_ref }}...HEAD -- lib/ | grep -c "context\." || echo "0")
+          ASYNC_GAP=$(git diff ${{ github.base_ref }}...HEAD -- lib/ | grep -c "context\." || echo "0")
           echo "async_gap_risk=$ASYNC_GAP" >> $GITHUB_OUTPUT
 
       - name: 💡 Post suggestions

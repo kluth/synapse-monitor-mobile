@@ -3,14 +3,34 @@ name: CI/CD Pipeline
 on:
   push:
     branches: [main, develop, 'claude/**']
+    paths:
+      - 'lib/**'
+      - 'test/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - 'analysis_options.yaml'
+      - '.github/workflows/ci.yml'
+      - 'android/**'
+      - 'ios/**'
+      - 'web/**'
   pull_request:
     branches: [main, develop]
+    paths:
+      - 'lib/**'
+      - 'test/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - 'analysis_options.yaml'
+      - '.github/workflows/ci.yml'
+      - 'android/**'
+      - 'ios/**'
+      - 'web/**'
   workflow_dispatch:
 
 # Cancel in-progress runs for the same workflow
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop' }}
 
 env:
   FLUTTER_VERSION: '3.24.0'
@@ -99,24 +119,11 @@ jobs:
         uses: actions/checkout@v4
 
       - name: 🔧 Setup Flutter SDK
-        uses: actions/checkout@v4
+        uses: subosito/flutter-action@v2
         with:
-          repository: 'flutter/flutter'
-          ref: ${{ env.FLUTTER_VERSION }}
-          path: 'flutter-sdk'
-
-      - name: 📦 Cache Flutter dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            flutter-sdk
-            ~/.pub-cache
-          key: ${{ runner.os }}-flutter-${{ env.FLUTTER_VERSION }}-${{ hashFiles('**/pubspec.lock') }}
-
-      - name: ⚙️ Add Flutter to PATH
-        run: |
-          echo "$GITHUB_WORKSPACE/flutter-sdk/bin" >> $GITHUB_PATH
-          echo "$GITHUB_WORKSPACE/flutter-sdk/bin/cache/dart-sdk/bin" >> $GITHUB_PATH
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
 
       - name: 📦 Get dependencies
         run: flutter pub get
@@ -147,24 +154,11 @@ jobs:
         uses: actions/checkout@v4
 
       - name: 🔧 Setup Flutter SDK
-        uses: actions/checkout@v4
+        uses: subosito/flutter-action@v2
         with:
-          repository: 'flutter/flutter'
-          ref: ${{ env.FLUTTER_VERSION }}
-          path: 'flutter-sdk'
-
-      - name: 📦 Cache Flutter dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            flutter-sdk
-            ~/.pub-cache
-          key: ${{ runner.os }}-flutter-${{ env.FLUTTER_VERSION }}-${{ hashFiles('**/pubspec.lock') }}
-
-      - name: ⚙️ Add Flutter to PATH
-        run: |
-          echo "$GITHUB_WORKSPACE/flutter-sdk/bin" >> $GITHUB_PATH
-          echo "$GITHUB_WORKSPACE/flutter-sdk/bin/cache/dart-sdk/bin" >> $GITHUB_PATH
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
 
       - name: 📦 Get dependencies
         run: flutter pub get
@@ -175,10 +169,25 @@ jobs:
       - name: 🧪 Run all tests with coverage
         run: flutter test --coverage --reporter expanded
 
+      - name: 📦 Cache lcov
+        uses: actions/cache@v4
+        with:
+          path: |
+            /usr/bin/lcov
+            /usr/bin/genhtml
+          key: lcov-${{ runner.os }}-1.15
+
+      - name: 📦 Install lcov if needed
+        run: |
+          if [ ! -f /usr/bin/lcov ]; then
+            sudo apt-get update
+            sudo apt-get install -y lcov
+          else
+            echo "lcov already installed (from cache)"
+          fi
+
       - name: 📊 Check test coverage threshold
         run: |
-          sudo apt-get update
-          sudo apt-get install -y lcov
           lcov --summary coverage/lcov.info > coverage_summary.txt
           COVERAGE=$(grep -oP 'lines......: \K[0-9.]+' coverage_summary.txt)
           echo "Test coverage: $COVERAGE%"
@@ -270,24 +279,11 @@ jobs:
           cache: 'gradle'
 
       - name: 🔧 Setup Flutter SDK
-        uses: actions/checkout@v4
+        uses: subosito/flutter-action@v2
         with:
-          repository: 'flutter/flutter'
-          ref: ${{ env.FLUTTER_VERSION }}
-          path: 'flutter-sdk'
-
-      - name: 📦 Cache Flutter dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            flutter-sdk
-            ~/.pub-cache
-          key: ${{ runner.os }}-flutter-${{ env.FLUTTER_VERSION }}-${{ hashFiles('**/pubspec.lock') }}
-
-      - name: ⚙️ Add Flutter to PATH
-        run: |
-          echo "$GITHUB_WORKSPACE/flutter-sdk/bin" >> $GITHUB_PATH
-          echo "$GITHUB_WORKSPACE/flutter-sdk/bin/cache/dart-sdk/bin" >> $GITHUB_PATH
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
 
       - name: 📦 Get dependencies
         run: flutter pub get
@@ -336,24 +332,11 @@ jobs:
         uses: actions/checkout@v4
 
       - name: 🔧 Setup Flutter SDK
-        uses: actions/checkout@v4
+        uses: subosito/flutter-action@v2
         with:
-          repository: 'flutter/flutter'
-          ref: ${{ env.FLUTTER_VERSION }}
-          path: 'flutter-sdk'
-
-      - name: 📦 Cache Flutter dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            flutter-sdk
-            ~/.pub-cache
-          key: ${{ runner.os }}-flutter-${{ env.FLUTTER_VERSION }}-${{ hashFiles('**/pubspec.lock') }}
-
-      - name: ⚙️ Add Flutter to PATH
-        run: |
-          echo "$GITHUB_WORKSPACE/flutter-sdk/bin" >> $GITHUB_PATH
-          echo "$GITHUB_WORKSPACE/flutter-sdk/bin/cache/dart-sdk/bin" >> $GITHUB_PATH
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
 
       - name: 📦 Get dependencies
         run: flutter pub get
@@ -385,24 +368,11 @@ jobs:
         uses: actions/checkout@v4
 
       - name: 🔧 Setup Flutter SDK
-        uses: actions/checkout@v4
+        uses: subosito/flutter-action@v2
         with:
-          repository: 'flutter/flutter'
-          ref: ${{ env.FLUTTER_VERSION }}
-          path: 'flutter-sdk'
-
-      - name: 📦 Cache Flutter dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            flutter-sdk
-            ~/.pub-cache
-          key: ${{ runner.os }}-flutter-${{ env.FLUTTER_VERSION }}-${{ hashFiles('**/pubspec.lock') }}
-
-      - name: ⚙️ Add Flutter to PATH
-        run: |
-          echo "$GITHUB_WORKSPACE/flutter-sdk/bin" >> $GITHUB_PATH
-          echo "$GITHUB_WORKSPACE/flutter-sdk/bin/cache/dart-sdk/bin" >> $GITHUB_PATH
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
 
       - name: 📦 Get dependencies
         run: flutter pub get
@@ -550,44 +520,55 @@ jobs:
         uses: actions/deploy-pages@v4
 
   # ============================================================================
-  # JOB 10: Status Summary
+  # JOB 10: Status Summary & Sentinel Check
   # ============================================================================
-  summary:
-    name: Pipeline Summary
+  # This job serves as the single required status check for branch protection.
+  # It aggregates all critical jobs and fails if any required check fails.
+  all-checks-complete:
+    name: All Required Checks Complete
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [code-quality, code-generation, test, security, build-android, build-web]
+    # Only depend on truly required jobs that always run
+    needs: [code-quality, code-generation, test, security]
     if: always()
 
     steps:
-      - name: 📊 Generate summary
+      - name: 📊 Check all required jobs
         uses: actions/github-script@v7
         with:
           script: |
-            const summary = `
-            # 🚀 CI/CD Pipeline Summary
+            const jobs = {
+              'Code Quality': '${{ needs.code-quality.result }}',
+              'Code Generation': '${{ needs.code-generation.result }}',
+              'Tests': '${{ needs.test.result }}',
+              'Security': '${{ needs.security.result }}'
+            };
 
-            ## Job Status
-            - Code Quality: ${{ needs.code-quality.result }}
-            - Code Generation: ${{ needs.code-generation.result }}
-            - Tests: ${{ needs.test.result }}
-            - Security: ${{ needs.security.result }}
-            - Build Android: ${{ needs.build-android.result }}
-            - Build Web: ${{ needs.build-web.result }}
+            let summary = '# 🚀 CI Pipeline Status\n\n## Required Checks\n';
+            let allPassed = true;
 
-            ## Commit Info
-            - Branch: ${{ github.ref_name }}
-            - Commit: ${{ github.sha }}
-            - Author: ${{ github.actor }}
-            `;
+            for (const [name, result] of Object.entries(jobs)) {
+              const icon = result === 'success' ? '✅' : result === 'failure' ? '❌' : '⚠️';
+              summary += `- ${icon} ${name}: ${result}\n`;
+              if (result !== 'success') {
+                allPassed = false;
+              }
+            }
+
+            summary += '\n## Commit Info\n';
+            summary += `- Branch: ${{ github.ref_name }}\n`;
+            summary += `- Commit: ${{ github.sha }}\n`;
+            summary += `- Author: ${{ github.actor }}\n`;
+
+            if (allPassed) {
+              summary += '\n✅ **All required checks passed!**\n';
+            } else {
+              summary += '\n❌ **One or more required checks failed.**\n';
+            }
 
             await core.summary.addRaw(summary).write();
 
-      - name: ❌ Pipeline failed
-        if: |
-          needs.code-quality.result == 'failure' ||
-          needs.code-generation.result == 'failure' ||
-          needs.test.result == 'failure'
-        run: |
-          echo "Pipeline failed. Check the logs above for details."
-          exit 1
+            // Fail this job if any required check failed
+            if (!allPassed) {
+              core.setFailed('One or more required checks failed');
+            }
