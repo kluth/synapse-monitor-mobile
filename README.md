@@ -32,17 +32,18 @@ This **Synapse Monitor App** serves as a mobile command center, connecting to an
 
 ### Prerequisites
 
-  * Flutter SDK (Version 3.x.x or higher)
-  * Dart SDK
-  * A running Synapse backend that exposes a monitoring API (e.g., WebSocket or REST).
+  * Flutter SDK (Version 3.0.0 or higher)
+  * Dart SDK (comes with Flutter)
+  * A code editor (VS Code, Android Studio, or IntelliJ IDEA)
+  * For detailed build requirements, see [BUILD_INSTRUCTIONS.md](BUILD_INSTRUCTIONS.md)
 
-### Installation & Execution
+### Quick Start
 
 1.  **Clone the repository:**
 
     ```bash
-    git clone https://github.com/YOUR_USERNAME/YOUR_REPOSITORY.git
-    cd YOUR_REPOSITORY
+    git clone https://github.com/kluth/synapse-monitor-mobile.git
+    cd synapse-monitor-mobile
     ```
 
 2.  **Install dependencies:**
@@ -51,29 +52,104 @@ This **Synapse Monitor App** serves as a mobile command center, connecting to an
     flutter pub get
     ```
 
-3.  **Configure the application:**
-    Create a `.env` file in the project root (based on `.env.example`) and add the endpoint for your Synapse monitoring API:
-
-    ```ini
-    # .env
-    SYNAPSE_API_ENDPOINT=wss://your-synapse-backend.com/monitor
-    ```
-
-4.  **Run the app:**
+3.  **Run the app:**
 
     ```bash
+    # On Chrome (easiest for testing)
+    flutter run -d chrome
+
+    # Or on connected device/emulator
     flutter run
     ```
+
+### Full Build Instructions
+
+For complete build, test, and deployment instructions, see **[BUILD_INSTRUCTIONS.md](BUILD_INSTRUCTIONS.md)**
+
+This includes:
+- Platform-specific setup (Android, iOS, Web, Desktop)
+- Code generation commands
+- Testing strategies
+- Troubleshooting guide
+
+## 📊 Current Status
+
+### ✅ Implemented (Phase 1-3)
+
+**Phase 1: Core Infrastructure** (14 files, ~2,750 lines)
+- ✅ Network layer (HTTP client with Dio + WebSocket)
+- ✅ Theme system (Light/Dark modes with Material 3)
+- ✅ Utilities (Logger, Formatters, Validators)
+- ✅ Core widgets (Loading, Error, Empty states)
+- ✅ Base architecture (UseCase pattern, DI container)
+
+**Phase 2: Domain Layer - Entities** (18 files, ~1,900 lines)
+- ✅ 15 domain entities with business logic
+- ✅ 4 repository interfaces
+- ✅ Complete entity models for Neurons, Synapses, Glial Cells, System Health
+
+**Phase 3: Domain Layer - Use Cases** (19 files, ~475 lines)
+- ✅ 19 use cases following Clean Architecture
+- ✅ Neuron operations (7 use cases)
+- ✅ Synapse operations (3 use cases)
+- ✅ Glial cells operations (4 use cases)
+- ✅ System health operations (5 use cases)
+
+### 🚧 In Progress
+
+**Phase 4: Data Layer**
+- Data models with Freezed
+- Data sources (REST + WebSocket)
+- Repository implementations
+
+**Phase 5: Presentation Layer**
+- Riverpod providers
+- Feature screens
+- UI components
+
+### 📈 Statistics
+
+- **Total Files**: 51
+- **Lines of Code**: ~5,125
+- **Test Coverage**: TDD ready (tests coming in Phase 4)
+- **Architecture**: Clean Architecture with SOLID principles
 
 ## 📐 Architecture & Planning
 
 This project strictly adheres to the principles of **Clean Code** and **Clean Architecture**. The application logic is segregated into well-defined layers (Data, Domain, Presentation) to ensure high testability and maintainability.
 
-  * **State Management:** (Please select one, e.g., `Riverpod`, `Bloc`)
-  * **Dependency Injection:** (e.g., `get_it`, `Riverpod`)
-  * **Routing:** (e.g., `GoRouter`, `AutoRoute`)
+### Technology Stack
 
-Prior to the implementation of any new feature, a mandatory **planning and review cycle** is conducted. This process ensures all requirements are critically examined and best practices are upheld.
+  * **State Management:** Riverpod (with code generation)
+  * **Dependency Injection:** GetIt + Injectable
+  * **Routing:** GoRouter (type-safe navigation)
+  * **Network:** Dio (HTTP) + WebSocket Channel (real-time)
+  * **Code Generation:** Freezed, json_serializable, riverpod_generator
+  * **Testing:** mocktail, flutter_test, integration_test
+
+### Architecture Layers
+
+1. **Domain Layer** (✅ Complete)
+   - Pure Dart business logic
+   - Entities with business rules
+   - Repository interfaces
+   - Use cases (application-specific logic)
+
+2. **Data Layer** (🚧 In Progress)
+   - Models with JSON serialization
+   - Remote data sources (API clients)
+   - Repository implementations
+   - Error handling
+
+3. **Presentation Layer** (📋 Planned)
+   - Riverpod providers (state management)
+   - Screens and widgets
+   - UI components
+   - Navigation
+
+For detailed architecture documentation, see [ARCHITECTURE.md](ARCHITECTURE.md)
+
+For implementation roadmap, see [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md)
 
 ## 🧪 Testing (TDD Mandatory)
 
