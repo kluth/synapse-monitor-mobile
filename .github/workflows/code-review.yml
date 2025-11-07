@@ -21,12 +21,25 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 🔧 Setup Flutter
-        uses: subosito/flutter-action@v2
+      - name: 🔧 Setup Flutter SDK
+        uses: actions/checkout@v4
         with:
-          flutter-version: '3.24.0'
-          channel: 'stable'
-          cache: true
+          repository: 'flutter/flutter'
+          ref: '3.24.0'
+          path: 'flutter-sdk'
+
+      - name: 📦 Cache Flutter dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            flutter-sdk
+            ~/.pub-cache
+          key: ${{ runner.os }}-flutter-3.24.0-${{ hashFiles('**/pubspec.lock') }}
+
+      - name: ⚙️ Add Flutter to PATH
+        run: |
+          echo "$GITHUB_WORKSPACE/flutter-sdk/bin" >> $GITHUB_PATH
+          echo "$GITHUB_WORKSPACE/flutter-sdk/bin/cache/dart-sdk/bin" >> $GITHUB_PATH
 
       - name: 📦 Get dependencies
         run: flutter pub get
@@ -191,12 +204,25 @@ jobs:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🔧 Setup Flutter
-        uses: subosito/flutter-action@v2
+      - name: 🔧 Setup Flutter SDK
+        uses: actions/checkout@v4
         with:
-          flutter-version: '3.24.0'
-          channel: 'stable'
-          cache: true
+          repository: 'flutter/flutter'
+          ref: '3.24.0'
+          path: 'flutter-sdk'
+
+      - name: 📦 Cache Flutter dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            flutter-sdk
+            ~/.pub-cache
+          key: ${{ runner.os }}-flutter-3.24.0-${{ hashFiles('**/pubspec.lock') }}
+
+      - name: ⚙️ Add Flutter to PATH
+        run: |
+          echo "$GITHUB_WORKSPACE/flutter-sdk/bin" >> $GITHUB_PATH
+          echo "$GITHUB_WORKSPACE/flutter-sdk/bin/cache/dart-sdk/bin" >> $GITHUB_PATH
 
       - name: 📦 Get dependencies
         run: flutter pub get
@@ -251,12 +277,25 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 🔧 Setup Flutter
-        uses: subosito/flutter-action@v2
+      - name: 🔧 Setup Flutter SDK
+        uses: actions/checkout@v4
         with:
-          flutter-version: '3.24.0'
-          channel: 'stable'
-          cache: true
+          repository: 'flutter/flutter'
+          ref: '3.24.0'
+          path: 'flutter-sdk'
+
+      - name: 📦 Cache Flutter dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            flutter-sdk
+            ~/.pub-cache
+          key: ${{ runner.os }}-flutter-3.24.0-${{ hashFiles('**/pubspec.lock') }}
+
+      - name: ⚙️ Add Flutter to PATH
+        run: |
+          echo "$GITHUB_WORKSPACE/flutter-sdk/bin" >> $GITHUB_PATH
+          echo "$GITHUB_WORKSPACE/flutter-sdk/bin/cache/dart-sdk/bin" >> $GITHUB_PATH
 
       - name: 📦 Get dependencies
         run: flutter pub get

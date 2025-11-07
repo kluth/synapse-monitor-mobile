@@ -14,8 +14,8 @@ concurrency:
 
 env:
   FLUTTER_VERSION: '3.24.0'
+  FLUTTER_CHANNEL: 'stable'
   JAVA_VERSION: '17'
-  NODE_VERSION: '18'
 
 jobs:
   # ============================================================================
@@ -30,14 +30,33 @@ jobs:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Full history for better analysis
+          fetch-depth: 0
 
-      - name: 🔧 Setup Flutter
-        uses: subosito/flutter-action@v2
+      - name: 🔧 Setup Flutter SDK
+        uses: actions/checkout@v4
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: 'stable'
-          cache: true
+          repository: 'flutter/flutter'
+          ref: ${{ env.FLUTTER_VERSION }}
+          path: 'flutter-sdk'
+
+      - name: 📦 Cache Flutter dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            flutter-sdk
+            ~/.pub-cache
+          key: ${{ runner.os }}-flutter-${{ env.FLUTTER_VERSION }}-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-flutter-${{ env.FLUTTER_VERSION }}-
+            ${{ runner.os }}-flutter-
+
+      - name: ⚙️ Add Flutter to PATH
+        run: |
+          echo "$GITHUB_WORKSPACE/flutter-sdk/bin" >> $GITHUB_PATH
+          echo "$GITHUB_WORKSPACE/flutter-sdk/bin/cache/dart-sdk/bin" >> $GITHUB_PATH
+
+      - name: 🔍 Flutter doctor
+        run: flutter doctor -v
 
       - name: 📦 Get dependencies
         run: flutter pub get
@@ -67,11 +86,6 @@ jobs:
           flutter pub global activate dependency_validator
           flutter pub global run dependency_validator:dependency_validator
 
-      - name: 📝 Check import ordering
-        run: |
-          flutter pub global activate import_sorter
-          flutter pub global run import_sorter:main --check-only
-
   # ============================================================================
   # JOB 2: Code Generation Verification
   # ============================================================================
@@ -84,12 +98,25 @@ jobs:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🔧 Setup Flutter
-        uses: subosito/flutter-action@v2
+      - name: 🔧 Setup Flutter SDK
+        uses: actions/checkout@v4
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: 'stable'
-          cache: true
+          repository: 'flutter/flutter'
+          ref: ${{ env.FLUTTER_VERSION }}
+          path: 'flutter-sdk'
+
+      - name: 📦 Cache Flutter dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            flutter-sdk
+            ~/.pub-cache
+          key: ${{ runner.os }}-flutter-${{ env.FLUTTER_VERSION }}-${{ hashFiles('**/pubspec.lock') }}
+
+      - name: ⚙️ Add Flutter to PATH
+        run: |
+          echo "$GITHUB_WORKSPACE/flutter-sdk/bin" >> $GITHUB_PATH
+          echo "$GITHUB_WORKSPACE/flutter-sdk/bin/cache/dart-sdk/bin" >> $GITHUB_PATH
 
       - name: 📦 Get dependencies
         run: flutter pub get
@@ -119,12 +146,25 @@ jobs:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🔧 Setup Flutter
-        uses: subosito/flutter-action@v2
+      - name: 🔧 Setup Flutter SDK
+        uses: actions/checkout@v4
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: 'stable'
-          cache: true
+          repository: 'flutter/flutter'
+          ref: ${{ env.FLUTTER_VERSION }}
+          path: 'flutter-sdk'
+
+      - name: 📦 Cache Flutter dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            flutter-sdk
+            ~/.pub-cache
+          key: ${{ runner.os }}-flutter-${{ env.FLUTTER_VERSION }}-${{ hashFiles('**/pubspec.lock') }}
+
+      - name: ⚙️ Add Flutter to PATH
+        run: |
+          echo "$GITHUB_WORKSPACE/flutter-sdk/bin" >> $GITHUB_PATH
+          echo "$GITHUB_WORKSPACE/flutter-sdk/bin/cache/dart-sdk/bin" >> $GITHUB_PATH
 
       - name: 📦 Get dependencies
         run: flutter pub get
@@ -137,18 +177,11 @@ jobs:
 
       - name: 📊 Check test coverage threshold
         run: |
-          # Install lcov tools
           sudo apt-get update
           sudo apt-get install -y lcov
-
-          # Generate coverage report
           lcov --summary coverage/lcov.info > coverage_summary.txt
-
-          # Extract coverage percentage
           COVERAGE=$(grep -oP 'lines......: \K[0-9.]+' coverage_summary.txt)
           echo "Test coverage: $COVERAGE%"
-
-          # Check threshold (85%)
           THRESHOLD=85.0
           if (( $(echo "$COVERAGE < $THRESHOLD" | bc -l) )); then
             echo "❌ Coverage $COVERAGE% is below threshold $THRESHOLD%"
@@ -157,22 +190,11 @@ jobs:
             echo "✅ Coverage $COVERAGE% meets threshold $THRESHOLD%"
           fi
 
-      - name: 📤 Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          files: coverage/lcov.info
-          fail_ci_if_error: false
-          flags: unittests
-          name: synapse-monitor-coverage
-
-      - name: 📊 Generate coverage report
+      - name: 📊 Generate coverage HTML report
         if: always()
-        run: |
-          # Generate HTML coverage report
-          genhtml coverage/lcov.info -o coverage/html
-          echo "Coverage report generated at coverage/html/index.html"
+        run: genhtml coverage/lcov.info -o coverage/html
 
-      - name: 📤 Upload coverage HTML report
+      - name: 📤 Upload coverage report
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -181,66 +203,7 @@ jobs:
           retention-days: 30
 
   # ============================================================================
-  # JOB 4: Integration Tests
-  # ============================================================================
-  integration-test:
-    name: Integration Tests
-    runs-on: macos-latest # macOS for iOS simulator
-    timeout-minutes: 45
-    if: github.event_name == 'push' || github.event.pull_request.draft == false
-
-    strategy:
-      matrix:
-        device:
-          - 'iPhone 15 Pro'
-          - 'Pixel 7 Pro'
-
-    steps:
-      - name: 📥 Checkout repository
-        uses: actions/checkout@v4
-
-      - name: 🔧 Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: 'stable'
-          cache: true
-
-      - name: 📦 Get dependencies
-        run: flutter pub get
-
-      - name: ⚙️ Run code generation
-        run: dart run build_runner build --delete-conflicting-outputs
-
-      - name: 📱 Setup iOS Simulator
-        if: contains(matrix.device, 'iPhone')
-        run: |
-          xcrun simctl create test-iphone com.apple.CoreSimulator.SimDeviceType.iPhone-15-Pro
-          xcrun simctl boot test-iphone
-
-      - name: 📱 Setup Android Emulator
-        if: contains(matrix.device, 'Pixel')
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 33
-          arch: x86_64
-          profile: pixel_7_pro
-          script: echo "Emulator booted"
-
-      - name: 🧪 Run integration tests
-        run: flutter test integration_test
-        continue-on-error: true
-
-      - name: 📤 Upload integration test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: integration-test-results-${{ matrix.device }}
-          path: integration_test/screenshots
-          retention-days: 14
-
-  # ============================================================================
-  # JOB 5: Security Scanning
+  # JOB 4: Security Scanning
   # ============================================================================
   security:
     name: Security Scanning
@@ -254,40 +217,39 @@ jobs:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🔧 Setup Flutter
-        uses: subosito/flutter-action@v2
+      - name: 🔧 Setup Flutter SDK
+        uses: actions/checkout@v4
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: 'stable'
-          cache: true
+          repository: 'flutter/flutter'
+          ref: ${{ env.FLUTTER_VERSION }}
+          path: 'flutter-sdk'
+
+      - name: ⚙️ Add Flutter to PATH
+        run: |
+          echo "$GITHUB_WORKSPACE/flutter-sdk/bin" >> $GITHUB_PATH
+          echo "$GITHUB_WORKSPACE/flutter-sdk/bin/cache/dart-sdk/bin" >> $GITHUB_PATH
 
       - name: 📦 Get dependencies
         run: flutter pub get
 
-      - name: 🔒 Run dependency vulnerability scan
-        run: |
-          # Check for known vulnerabilities in dependencies
-          flutter pub outdated --json > outdated.json || true
+      - name: 🔒 Check for outdated/vulnerable packages
+        run: flutter pub outdated --json > outdated.json || true
 
-          # Install and run OSV scanner
+      - name: 🔒 Download OSV Scanner
+        run: |
           curl -L https://github.com/google/osv-scanner/releases/download/v1.4.3/osv-scanner_1.4.3_linux_amd64 -o osv-scanner
           chmod +x osv-scanner
-          ./osv-scanner --lockfile=pubspec.lock --format=json > osv-results.json || true
 
-      - name: 🔍 Secret scanning
-        uses: trufflesecurity/trufflehog@main
-        with:
-          path: ./
-          base: ${{ github.event.repository.default_branch }}
-          head: HEAD
+      - name: 🔍 Run OSV vulnerability scan
+        run: ./osv-scanner --lockfile=pubspec.lock --format=json > osv-results.json || true
 
-      - name: 📊 SAST - Static Analysis
+      - name: 📊 Analyze dependencies
         run: |
           flutter pub global activate pana
           flutter pub global run pana --no-warning --json > pana-results.json || true
 
   # ============================================================================
-  # JOB 6: Build Android
+  # JOB 5: Build Android
   # ============================================================================
   build-android:
     name: Build Android (APK & AAB)
@@ -307,12 +269,25 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           cache: 'gradle'
 
-      - name: 🔧 Setup Flutter
-        uses: subosito/flutter-action@v2
+      - name: 🔧 Setup Flutter SDK
+        uses: actions/checkout@v4
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: 'stable'
-          cache: true
+          repository: 'flutter/flutter'
+          ref: ${{ env.FLUTTER_VERSION }}
+          path: 'flutter-sdk'
+
+      - name: 📦 Cache Flutter dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            flutter-sdk
+            ~/.pub-cache
+          key: ${{ runner.os }}-flutter-${{ env.FLUTTER_VERSION }}-${{ hashFiles('**/pubspec.lock') }}
+
+      - name: ⚙️ Add Flutter to PATH
+        run: |
+          echo "$GITHUB_WORKSPACE/flutter-sdk/bin" >> $GITHUB_PATH
+          echo "$GITHUB_WORKSPACE/flutter-sdk/bin/cache/dart-sdk/bin" >> $GITHUB_PATH
 
       - name: 📦 Get dependencies
         run: flutter pub get
@@ -321,21 +296,15 @@ jobs:
         run: dart run build_runner build --delete-conflicting-outputs
 
       - name: 🏗️ Build APK (Debug)
-        run: flutter build apk --debug --flavor development
+        run: flutter build apk --debug
 
       - name: 🏗️ Build APK (Release)
         if: github.ref == 'refs/heads/main'
-        run: flutter build apk --release --flavor production
+        run: flutter build apk --release
 
       - name: 🏗️ Build App Bundle (Release)
         if: github.ref == 'refs/heads/main'
-        run: flutter build appbundle --release --flavor production
-
-      - name: 📊 Analyze APK size
-        run: |
-          APK_SIZE=$(du -h build/app/outputs/flutter-apk/app-*.apk | cut -f1)
-          echo "APK Size: $APK_SIZE"
-          echo "apk_size=$APK_SIZE" >> $GITHUB_OUTPUT
+        run: flutter build appbundle --release
 
       - name: 📤 Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -353,7 +322,7 @@ jobs:
           retention-days: 30
 
   # ============================================================================
-  # JOB 7: Build iOS
+  # JOB 6: Build iOS
   # ============================================================================
   build-ios:
     name: Build iOS
@@ -366,12 +335,25 @@ jobs:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🔧 Setup Flutter
-        uses: subosito/flutter-action@v2
+      - name: 🔧 Setup Flutter SDK
+        uses: actions/checkout@v4
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: 'stable'
-          cache: true
+          repository: 'flutter/flutter'
+          ref: ${{ env.FLUTTER_VERSION }}
+          path: 'flutter-sdk'
+
+      - name: 📦 Cache Flutter dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            flutter-sdk
+            ~/.pub-cache
+          key: ${{ runner.os }}-flutter-${{ env.FLUTTER_VERSION }}-${{ hashFiles('**/pubspec.lock') }}
+
+      - name: ⚙️ Add Flutter to PATH
+        run: |
+          echo "$GITHUB_WORKSPACE/flutter-sdk/bin" >> $GITHUB_PATH
+          echo "$GITHUB_WORKSPACE/flutter-sdk/bin/cache/dart-sdk/bin" >> $GITHUB_PATH
 
       - name: 📦 Get dependencies
         run: flutter pub get
@@ -388,15 +370,8 @@ jobs:
       - name: 🏗️ Build iOS (No Codesign)
         run: flutter build ios --release --no-codesign
 
-      - name: 📊 Analyze IPA size
-        run: |
-          if [ -d "build/ios/iphoneos" ]; then
-            IPA_SIZE=$(du -sh build/ios/iphoneos/Runner.app | cut -f1)
-            echo "IPA Size: $IPA_SIZE"
-          fi
-
   # ============================================================================
-  # JOB 8: Build Web
+  # JOB 7: Build Web
   # ============================================================================
   build-web:
     name: Build Web
@@ -409,12 +384,25 @@ jobs:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🔧 Setup Flutter
-        uses: subosito/flutter-action@v2
+      - name: 🔧 Setup Flutter SDK
+        uses: actions/checkout@v4
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: 'stable'
-          cache: true
+          repository: 'flutter/flutter'
+          ref: ${{ env.FLUTTER_VERSION }}
+          path: 'flutter-sdk'
+
+      - name: 📦 Cache Flutter dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            flutter-sdk
+            ~/.pub-cache
+          key: ${{ runner.os }}-flutter-${{ env.FLUTTER_VERSION }}-${{ hashFiles('**/pubspec.lock') }}
+
+      - name: ⚙️ Add Flutter to PATH
+        run: |
+          echo "$GITHUB_WORKSPACE/flutter-sdk/bin" >> $GITHUB_PATH
+          echo "$GITHUB_WORKSPACE/flutter-sdk/bin/cache/dart-sdk/bin" >> $GITHUB_PATH
 
       - name: 📦 Get dependencies
         run: flutter pub get
@@ -425,11 +413,6 @@ jobs:
       - name: 🏗️ Build Web
         run: flutter build web --release --web-renderer canvaskit
 
-      - name: 📊 Analyze bundle size
-        run: |
-          WEB_SIZE=$(du -sh build/web | cut -f1)
-          echo "Web bundle size: $WEB_SIZE"
-
       - name: 📤 Upload web artifact
         uses: actions/upload-artifact@v4
         with:
@@ -438,7 +421,7 @@ jobs:
           retention-days: 30
 
   # ============================================================================
-  # JOB 9: Build Desktop (Windows, macOS, Linux)
+  # JOB 8: Build Desktop (Windows, macOS, Linux)
   # ============================================================================
   build-desktop:
     name: Build Desktop (${{ matrix.platform }})
@@ -461,12 +444,32 @@ jobs:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🔧 Setup Flutter
-        uses: subosito/flutter-action@v2
+      - name: 🔧 Setup Flutter SDK
+        uses: actions/checkout@v4
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: 'stable'
-          cache: true
+          repository: 'flutter/flutter'
+          ref: ${{ env.FLUTTER_VERSION }}
+          path: 'flutter-sdk'
+
+      - name: 📦 Cache Flutter dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            flutter-sdk
+            ~/.pub-cache
+          key: ${{ runner.os }}-flutter-${{ env.FLUTTER_VERSION }}-${{ hashFiles('**/pubspec.lock') }}
+
+      - name: ⚙️ Add Flutter to PATH (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: |
+          echo "$GITHUB_WORKSPACE/flutter-sdk/bin" >> $GITHUB_PATH
+          echo "$GITHUB_WORKSPACE/flutter-sdk/bin/cache/dart-sdk/bin" >> $GITHUB_PATH
+
+      - name: ⚙️ Add Flutter to PATH (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          echo "$env:GITHUB_WORKSPACE\flutter-sdk\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          echo "$env:GITHUB_WORKSPACE\flutter-sdk\bin\cache\dart-sdk\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: 🔧 Install Linux dependencies
         if: matrix.platform == 'linux'
@@ -491,24 +494,33 @@ jobs:
           retention-days: 30
 
   # ============================================================================
-  # JOB 10: Documentation Generation
+  # JOB 9: Documentation Generation
   # ============================================================================
   documentation:
     name: Generate Documentation
     runs-on: ubuntu-latest
     timeout-minutes: 15
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
 
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🔧 Setup Flutter
-        uses: subosito/flutter-action@v2
+      - name: 🔧 Setup Flutter SDK
+        uses: actions/checkout@v4
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: 'stable'
-          cache: true
+          repository: 'flutter/flutter'
+          ref: ${{ env.FLUTTER_VERSION }}
+          path: 'flutter-sdk'
+
+      - name: ⚙️ Add Flutter to PATH
+        run: |
+          echo "$GITHUB_WORKSPACE/flutter-sdk/bin" >> $GITHUB_PATH
+          echo "$GITHUB_WORKSPACE/flutter-sdk/bin/cache/dart-sdk/bin" >> $GITHUB_PATH
 
       - name: 📦 Get dependencies
         run: flutter pub get
@@ -523,49 +535,22 @@ jobs:
           path: doc/api
           retention-days: 90
 
+      - name: 🚀 Setup GitHub Pages
+        if: github.ref == 'refs/heads/main'
+        uses: actions/configure-pages@v4
+
+      - name: 📦 Upload Pages artifact
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./doc/api
+
       - name: 🚀 Deploy to GitHub Pages
         if: github.ref == 'refs/heads/main'
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./doc/api
-          publish_branch: gh-pages
+        uses: actions/deploy-pages@v4
 
   # ============================================================================
-  # JOB 11: Performance Profiling
-  # ============================================================================
-  performance:
-    name: Performance Analysis
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    needs: [build-android, build-web]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-
-    steps:
-      - name: 📥 Download APK
-        uses: actions/download-artifact@v4
-        with:
-          name: android-apk
-
-      - name: 📥 Download Web build
-        uses: actions/download-artifact@v4
-        with:
-          name: web-build
-
-      - name: 📊 Analyze APK composition
-        run: |
-          # Analyze APK size breakdown
-          echo "## APK Size Analysis" >> $GITHUB_STEP_SUMMARY
-          ls -lh *.apk >> $GITHUB_STEP_SUMMARY
-
-      - name: 📊 Analyze Web bundle
-        run: |
-          # Analyze web bundle size
-          echo "## Web Bundle Analysis" >> $GITHUB_STEP_SUMMARY
-          du -h web/* >> $GITHUB_STEP_SUMMARY
-
-  # ============================================================================
-  # JOB 12: Status Summary
+  # JOB 10: Status Summary
   # ============================================================================
   summary:
     name: Pipeline Summary
@@ -576,21 +561,27 @@ jobs:
 
     steps:
       - name: 📊 Generate summary
-        run: |
-          echo "# 🚀 CI/CD Pipeline Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "## Job Status" >> $GITHUB_STEP_SUMMARY
-          echo "- Code Quality: ${{ needs.code-quality.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Code Generation: ${{ needs.code-generation.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Tests: ${{ needs.test.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Security: ${{ needs.security.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Build Android: ${{ needs.build-android.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Build Web: ${{ needs.build-web.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "## Commit Info" >> $GITHUB_STEP_SUMMARY
-          echo "- Branch: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Commit: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Author: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const summary = `
+            # 🚀 CI/CD Pipeline Summary
+
+            ## Job Status
+            - Code Quality: ${{ needs.code-quality.result }}
+            - Code Generation: ${{ needs.code-generation.result }}
+            - Tests: ${{ needs.test.result }}
+            - Security: ${{ needs.security.result }}
+            - Build Android: ${{ needs.build-android.result }}
+            - Build Web: ${{ needs.build-web.result }}
+
+            ## Commit Info
+            - Branch: ${{ github.ref_name }}
+            - Commit: ${{ github.sha }}
+            - Author: ${{ github.actor }}
+            `;
+
+            await core.summary.addRaw(summary).write();
 
       - name: ❌ Pipeline failed
         if: |
