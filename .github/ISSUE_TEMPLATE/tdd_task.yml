@@ -1,0 +1,196 @@
+name: 🧪 TDD Task
+description: Create a TDD (Test-Driven Development) task
+title: "[TDD]: "
+labels: ["tdd", "needs-implementation"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        # TDD Task Template
+        This template helps plan Test-Driven Development tasks following the RED → GREEN → REFACTOR cycle.
+
+  - type: textarea
+    id: feature-description
+    attributes:
+      label: 📝 Feature Description
+      description: What feature or functionality needs to be implemented?
+      placeholder: Describe the feature or functionality
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: ✅ Acceptance Criteria
+      description: Define clear acceptance criteria
+      placeholder: |
+        - [ ] Criterion 1
+        - [ ] Criterion 2
+        - [ ] Criterion 3
+    validations:
+      required: true
+
+  - type: textarea
+    id: red-phase
+    attributes:
+      label: 🔴 RED Phase - Test Planning
+      description: Define the tests that need to be written FIRST
+      placeholder: |
+        ## Test Cases to Write First:
+
+        ### Unit Tests
+        - [ ] test_description_1.dart
+          - should_test_behavior_1
+          - should_test_behavior_2
+
+        ### Widget Tests
+        - [ ] widget_test_1.dart
+
+        ### Integration Tests
+        - [ ] integration_test_1.dart
+
+        ## Expected Test Failures
+        - Tests should fail because feature doesn't exist yet
+        - All edge cases should be covered
+    validations:
+      required: true
+
+  - type: textarea
+    id: green-phase
+    attributes:
+      label: 🟢 GREEN Phase - Implementation Plan
+      description: Plan the minimal implementation to make tests pass
+      placeholder: |
+        ## Implementation Steps:
+
+        1. Create entity/model classes
+        2. Implement use cases
+        3. Add repository implementation
+        4. Implement UI components
+        5. Wire up providers
+
+        ## Files to Create/Modify:
+        - lib/features/.../entities/...
+        - lib/features/.../use_cases/...
+        - lib/features/.../data/...
+    validations:
+      required: true
+
+  - type: textarea
+    id: refactor-phase
+    attributes:
+      label: 🔵 REFACTOR Phase - Improvement Plan
+      description: Plan code improvements after tests pass
+      placeholder: |
+        ## Refactoring Goals:
+        - Improve code readability
+        - Remove duplication
+        - Optimize performance
+        - Add documentation
+        - Extract reusable components
+    validations:
+      required: false
+
+  - type: dropdown
+    id: layer
+    attributes:
+      label: 🏗️ Architecture Layer
+      description: Which layer(s) will be affected?
+      multiple: true
+      options:
+        - Domain Layer (Entities, Use Cases, Repositories)
+        - Data Layer (Models, Data Sources, Repository Impl)
+        - Presentation Layer (Providers, Screens, Widgets)
+        - Core (Utilities, Base Classes)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: feature-area
+    attributes:
+      label: 🎯 Feature Area
+      description: Which feature area does this belong to?
+      options:
+        - Neurons
+        - Synapses
+        - Glial Cells
+        - System Health
+        - Core/Shared
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: 🔗 Dependencies
+      description: List any dependencies or blockers
+      placeholder: |
+        - Depends on #123
+        - Requires API endpoint XYZ
+        - Blocked by #456
+
+  - type: textarea
+    id: test-data
+    attributes:
+      label: 📊 Test Data/Fixtures
+      description: Define test data and fixtures needed
+      placeholder: |
+        ## Fixtures to Create:
+        - test/fixtures/example_data.json
+
+        ## Mock Data:
+        ```dart
+        final testEntity = Entity(
+          id: 'test-id',
+          // ...
+        );
+        ```
+      render: dart
+
+  - type: checkboxes
+    id: tdd-checklist
+    attributes:
+      label: ✅ TDD Workflow Checklist
+      description: Track TDD progress (update as you go)
+      options:
+        - label: "🔴 RED: Tests written and failing"
+        - label: "🟢 GREEN: Implementation makes tests pass"
+        - label: "🔵 REFACTOR: Code improved and tests still pass"
+        - label: "📊 Coverage: Test coverage ≥85%"
+        - label: "📝 Documentation: Public APIs documented"
+        - label: "🎨 Code Style: Formatted and analyzed"
+        - label: "✅ Review: Self-reviewed and ready for PR"
+
+  - type: dropdown
+    id: complexity
+    attributes:
+      label: 📏 Estimated Complexity
+      description: How complex is this task?
+      options:
+        - XS (< 1 hour)
+        - S (1-2 hours)
+        - M (2-4 hours)
+        - L (4-8 hours)
+        - XL (> 1 day, consider breaking down)
+    validations:
+      required: true
+
+  - type: textarea
+    id: resources
+    attributes:
+      label: 📚 Resources & References
+      description: Links to documentation, examples, or related resources
+      placeholder: |
+        - [Related documentation](url)
+        - [Example implementation](url)
+        - [Design pattern reference](url)
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: 📎 Additional Notes
+      description: Any other information that would be helpful
+      placeholder: Additional context or considerations

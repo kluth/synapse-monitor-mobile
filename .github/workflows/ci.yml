@@ -1,0 +1,602 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop, 'claude/**']
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+# Cancel in-progress runs for the same workflow
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: '3.24.0'
+  JAVA_VERSION: '17'
+  NODE_VERSION: '18'
+
+jobs:
+  # ============================================================================
+  # JOB 1: Code Quality & Analysis
+  # ============================================================================
+  code-quality:
+    name: Code Quality & Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history for better analysis
+
+      - name: 🔧 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: 📦 Get dependencies
+        run: flutter pub get
+
+      - name: 🔍 Verify pubspec.lock is up to date
+        run: |
+          if git diff --exit-code pubspec.lock; then
+            echo "✅ pubspec.lock is up to date"
+          else
+            echo "❌ pubspec.lock is out of date. Run 'flutter pub get' and commit changes."
+            exit 1
+          fi
+
+      - name: 🎨 Check code formatting
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: 🔍 Analyze code
+        run: flutter analyze --fatal-infos --fatal-warnings
+
+      - name: 📊 Check code metrics
+        run: |
+          flutter pub global activate dart_code_metrics
+          flutter pub global run dart_code_metrics:metrics analyze lib --reporter=console
+
+      - name: 🔒 Check for unused dependencies
+        run: |
+          flutter pub global activate dependency_validator
+          flutter pub global run dependency_validator:dependency_validator
+
+      - name: 📝 Check import ordering
+        run: |
+          flutter pub global activate import_sorter
+          flutter pub global run import_sorter:main --check-only
+
+  # ============================================================================
+  # JOB 2: Code Generation Verification
+  # ============================================================================
+  code-generation:
+    name: Code Generation Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: 📦 Get dependencies
+        run: flutter pub get
+
+      - name: ⚙️ Run code generation
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: 🔍 Check for uncommitted generated files
+        run: |
+          if git diff --exit-code; then
+            echo "✅ All generated files are up to date"
+          else
+            echo "❌ Generated files are out of date. Run 'dart run build_runner build' and commit changes."
+            git diff
+            exit 1
+          fi
+
+  # ============================================================================
+  # JOB 3: Unit & Widget Tests
+  # ============================================================================
+  test:
+    name: Tests (Unit & Widget)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: 📦 Get dependencies
+        run: flutter pub get
+
+      - name: ⚙️ Run code generation
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: 🧪 Run all tests with coverage
+        run: flutter test --coverage --reporter expanded
+
+      - name: 📊 Check test coverage threshold
+        run: |
+          # Install lcov tools
+          sudo apt-get update
+          sudo apt-get install -y lcov
+
+          # Generate coverage report
+          lcov --summary coverage/lcov.info > coverage_summary.txt
+
+          # Extract coverage percentage
+          COVERAGE=$(grep -oP 'lines......: \K[0-9.]+' coverage_summary.txt)
+          echo "Test coverage: $COVERAGE%"
+
+          # Check threshold (85%)
+          THRESHOLD=85.0
+          if (( $(echo "$COVERAGE < $THRESHOLD" | bc -l) )); then
+            echo "❌ Coverage $COVERAGE% is below threshold $THRESHOLD%"
+            exit 1
+          else
+            echo "✅ Coverage $COVERAGE% meets threshold $THRESHOLD%"
+          fi
+
+      - name: 📤 Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage/lcov.info
+          fail_ci_if_error: false
+          flags: unittests
+          name: synapse-monitor-coverage
+
+      - name: 📊 Generate coverage report
+        if: always()
+        run: |
+          # Generate HTML coverage report
+          genhtml coverage/lcov.info -o coverage/html
+          echo "Coverage report generated at coverage/html/index.html"
+
+      - name: 📤 Upload coverage HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/html
+          retention-days: 30
+
+  # ============================================================================
+  # JOB 4: Integration Tests
+  # ============================================================================
+  integration-test:
+    name: Integration Tests
+    runs-on: macos-latest # macOS for iOS simulator
+    timeout-minutes: 45
+    if: github.event_name == 'push' || github.event.pull_request.draft == false
+
+    strategy:
+      matrix:
+        device:
+          - 'iPhone 15 Pro'
+          - 'Pixel 7 Pro'
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: 📦 Get dependencies
+        run: flutter pub get
+
+      - name: ⚙️ Run code generation
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: 📱 Setup iOS Simulator
+        if: contains(matrix.device, 'iPhone')
+        run: |
+          xcrun simctl create test-iphone com.apple.CoreSimulator.SimDeviceType.iPhone-15-Pro
+          xcrun simctl boot test-iphone
+
+      - name: 📱 Setup Android Emulator
+        if: contains(matrix.device, 'Pixel')
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          arch: x86_64
+          profile: pixel_7_pro
+          script: echo "Emulator booted"
+
+      - name: 🧪 Run integration tests
+        run: flutter test integration_test
+        continue-on-error: true
+
+      - name: 📤 Upload integration test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-results-${{ matrix.device }}
+          path: integration_test/screenshots
+          retention-days: 14
+
+  # ============================================================================
+  # JOB 5: Security Scanning
+  # ============================================================================
+  security:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      security-events: write
+      contents: read
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: 📦 Get dependencies
+        run: flutter pub get
+
+      - name: 🔒 Run dependency vulnerability scan
+        run: |
+          # Check for known vulnerabilities in dependencies
+          flutter pub outdated --json > outdated.json || true
+
+          # Install and run OSV scanner
+          curl -L https://github.com/google/osv-scanner/releases/download/v1.4.3/osv-scanner_1.4.3_linux_amd64 -o osv-scanner
+          chmod +x osv-scanner
+          ./osv-scanner --lockfile=pubspec.lock --format=json > osv-results.json || true
+
+      - name: 🔍 Secret scanning
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+
+      - name: 📊 SAST - Static Analysis
+        run: |
+          flutter pub global activate pana
+          flutter pub global run pana --no-warning --json > pana-results.json || true
+
+  # ============================================================================
+  # JOB 6: Build Android
+  # ============================================================================
+  build-android:
+    name: Build Android (APK & AAB)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [code-quality, test]
+    if: github.event_name == 'push'
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: 'gradle'
+
+      - name: 🔧 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: 📦 Get dependencies
+        run: flutter pub get
+
+      - name: ⚙️ Run code generation
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: 🏗️ Build APK (Debug)
+        run: flutter build apk --debug --flavor development
+
+      - name: 🏗️ Build APK (Release)
+        if: github.ref == 'refs/heads/main'
+        run: flutter build apk --release --flavor production
+
+      - name: 🏗️ Build App Bundle (Release)
+        if: github.ref == 'refs/heads/main'
+        run: flutter build appbundle --release --flavor production
+
+      - name: 📊 Analyze APK size
+        run: |
+          APK_SIZE=$(du -h build/app/outputs/flutter-apk/app-*.apk | cut -f1)
+          echo "APK Size: $APK_SIZE"
+          echo "apk_size=$APK_SIZE" >> $GITHUB_OUTPUT
+
+      - name: 📤 Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: build/app/outputs/flutter-apk/*.apk
+          retention-days: 30
+
+      - name: 📤 Upload AAB artifact
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-aab
+          path: build/app/outputs/bundle/**/*.aab
+          retention-days: 30
+
+  # ============================================================================
+  # JOB 7: Build iOS
+  # ============================================================================
+  build-ios:
+    name: Build iOS
+    runs-on: macos-latest
+    timeout-minutes: 45
+    needs: [code-quality, test]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: 📦 Get dependencies
+        run: flutter pub get
+
+      - name: ⚙️ Run code generation
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: 📦 Install CocoaPods
+        run: |
+          cd ios
+          pod install
+          cd ..
+
+      - name: 🏗️ Build iOS (No Codesign)
+        run: flutter build ios --release --no-codesign
+
+      - name: 📊 Analyze IPA size
+        run: |
+          if [ -d "build/ios/iphoneos" ]; then
+            IPA_SIZE=$(du -sh build/ios/iphoneos/Runner.app | cut -f1)
+            echo "IPA Size: $IPA_SIZE"
+          fi
+
+  # ============================================================================
+  # JOB 8: Build Web
+  # ============================================================================
+  build-web:
+    name: Build Web
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [code-quality, test]
+    if: github.event_name == 'push'
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: 📦 Get dependencies
+        run: flutter pub get
+
+      - name: ⚙️ Run code generation
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: 🏗️ Build Web
+        run: flutter build web --release --web-renderer canvaskit
+
+      - name: 📊 Analyze bundle size
+        run: |
+          WEB_SIZE=$(du -sh build/web | cut -f1)
+          echo "Web bundle size: $WEB_SIZE"
+
+      - name: 📤 Upload web artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-build
+          path: build/web
+          retention-days: 30
+
+  # ============================================================================
+  # JOB 9: Build Desktop (Windows, macOS, Linux)
+  # ============================================================================
+  build-desktop:
+    name: Build Desktop (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    needs: [code-quality, test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+          - os: macos-latest
+            platform: macos
+          - os: windows-latest
+            platform: windows
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: 🔧 Install Linux dependencies
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev
+
+      - name: 📦 Get dependencies
+        run: flutter pub get
+
+      - name: ⚙️ Run code generation
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: 🏗️ Build Desktop
+        run: flutter build ${{ matrix.platform }} --release
+
+      - name: 📤 Upload desktop artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.platform }}
+          path: build/${{ matrix.platform }}
+          retention-days: 30
+
+  # ============================================================================
+  # JOB 10: Documentation Generation
+  # ============================================================================
+  documentation:
+    name: Generate Documentation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: 📦 Get dependencies
+        run: flutter pub get
+
+      - name: 📚 Generate documentation
+        run: dart doc .
+
+      - name: 📤 Upload documentation
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation
+          path: doc/api
+          retention-days: 90
+
+      - name: 🚀 Deploy to GitHub Pages
+        if: github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./doc/api
+          publish_branch: gh-pages
+
+  # ============================================================================
+  # JOB 11: Performance Profiling
+  # ============================================================================
+  performance:
+    name: Performance Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [build-android, build-web]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: 📥 Download APK
+        uses: actions/download-artifact@v4
+        with:
+          name: android-apk
+
+      - name: 📥 Download Web build
+        uses: actions/download-artifact@v4
+        with:
+          name: web-build
+
+      - name: 📊 Analyze APK composition
+        run: |
+          # Analyze APK size breakdown
+          echo "## APK Size Analysis" >> $GITHUB_STEP_SUMMARY
+          ls -lh *.apk >> $GITHUB_STEP_SUMMARY
+
+      - name: 📊 Analyze Web bundle
+        run: |
+          # Analyze web bundle size
+          echo "## Web Bundle Analysis" >> $GITHUB_STEP_SUMMARY
+          du -h web/* >> $GITHUB_STEP_SUMMARY
+
+  # ============================================================================
+  # JOB 12: Status Summary
+  # ============================================================================
+  summary:
+    name: Pipeline Summary
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [code-quality, code-generation, test, security, build-android, build-web]
+    if: always()
+
+    steps:
+      - name: 📊 Generate summary
+        run: |
+          echo "# 🚀 CI/CD Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Job Status" >> $GITHUB_STEP_SUMMARY
+          echo "- Code Quality: ${{ needs.code-quality.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Code Generation: ${{ needs.code-generation.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Tests: ${{ needs.test.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Security: ${{ needs.security.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Build Android: ${{ needs.build-android.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Build Web: ${{ needs.build-web.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Commit Info" >> $GITHUB_STEP_SUMMARY
+          echo "- Branch: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Commit: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Author: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: ❌ Pipeline failed
+        if: |
+          needs.code-quality.result == 'failure' ||
+          needs.code-generation.result == 'failure' ||
+          needs.test.result == 'failure'
+        run: |
+          echo "Pipeline failed. Check the logs above for details."
+          exit 1

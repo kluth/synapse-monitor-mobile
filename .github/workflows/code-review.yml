@@ -1,0 +1,314 @@
+name: Automated Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  # ============================================================================
+  # Code Review Automation
+  # ============================================================================
+  review:
+    name: Automated Code Review
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔧 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          cache: true
+
+      - name: 📦 Get dependencies
+        run: flutter pub get
+
+      - name: 🔍 Run code review checks
+        id: review
+        run: |
+          # Check PR size
+          FILES_CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | wc -l)
+          LINES_CHANGED=$(git diff --shortstat origin/${{ github.base_ref }}...HEAD | grep -oP '\d+(?= insertions)' || echo "0")
+
+          echo "files_changed=$FILES_CHANGED" >> $GITHUB_OUTPUT
+          echo "lines_changed=$LINES_CHANGED" >> $GITHUB_OUTPUT
+
+          # Check for TDD compliance
+          TEST_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep "_test.dart" | wc -l)
+          CODE_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E "lib/.*\.dart$" | grep -v ".freezed.dart" | grep -v ".g.dart" | wc -l)
+
+          echo "test_files=$TEST_FILES" >> $GITHUB_OUTPUT
+          echo "code_files=$CODE_FILES" >> $GITHUB_OUTPUT
+
+          # Check for documentation
+          DOC_COMMENTS=$(git diff origin/${{ github.base_ref }}...HEAD -- lib/ | grep -c "///" || echo "0")
+          echo "doc_comments=$DOC_COMMENTS" >> $GITHUB_OUTPUT
+
+      - name: 📊 Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const filesChanged = ${{ steps.review.outputs.files_changed }};
+            const linesChanged = ${{ steps.review.outputs.lines_changed }};
+            const testFiles = ${{ steps.review.outputs.test_files }};
+            const codeFiles = ${{ steps.review.outputs.code_files }};
+            const docComments = ${{ steps.review.outputs.doc_comments }};
+
+            let body = '## 🤖 Automated Code Review\n\n';
+
+            // PR Size Check
+            body += '### 📏 PR Size\n';
+            body += `- Files changed: ${filesChanged}\n`;
+            body += `- Lines changed: ${linesChanged}\n`;
+
+            if (filesChanged > 50) {
+              body += '\n⚠️ **Large PR detected!** Consider breaking this into smaller PRs for easier review.\n';
+            } else if (filesChanged <= 10) {
+              body += '\n✅ **Good PR size!** Easy to review.\n';
+            }
+
+            // TDD Check
+            body += '\n### 🧪 Test Coverage\n';
+            body += `- Test files modified: ${testFiles}\n`;
+            body += `- Code files modified: ${codeFiles}\n`;
+
+            if (codeFiles > 0 && testFiles === 0) {
+              body += '\n⚠️ **No test files added!** Remember: TDD is mandatory. Write tests FIRST (RED), then implementation (GREEN).\n';
+              body += '\n**TDD Workflow:**\n';
+              body += '1. 🔴 RED: Write failing tests\n';
+              body += '2. 🟢 GREEN: Write minimum code to pass tests\n';
+              body += '3. 🔵 REFACTOR: Improve code quality\n';
+            } else if (testFiles >= codeFiles) {
+              body += '\n✅ **Great test coverage!** Following TDD principles.\n';
+            }
+
+            // Documentation Check
+            body += '\n### 📚 Documentation\n';
+            body += `- Documentation comments added: ${docComments}\n`;
+
+            if (codeFiles > 0 && docComments === 0) {
+              body += '\n⚠️ **No documentation comments found!** Please add /// comments for public APIs.\n';
+            } else if (docComments > 0) {
+              body += '\n✅ **Good documentation!** Public APIs are documented.\n';
+            }
+
+            // Best Practices Checklist
+            body += '\n### ✅ Review Checklist\n';
+            body += '- [ ] Code follows [Effective Dart](https://dart.dev/guides/language/effective-dart) guidelines\n';
+            body += '- [ ] All tests pass (`flutter test`)\n';
+            body += '- [ ] Code formatted (`dart format .`)\n';
+            body += '- [ ] No analyzer warnings (`flutter analyze`)\n';
+            body += '- [ ] Code generation up to date (`dart run build_runner build`)\n';
+            body += '- [ ] Public APIs documented with /// comments\n';
+            body += '- [ ] TDD approach followed (tests written first)\n';
+            body += '- [ ] Clean Architecture principles maintained\n';
+            body += '- [ ] No hardcoded strings (use l10n)\n';
+            body += '- [ ] Error handling implemented\n';
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+  # ============================================================================
+  # Label Pull Requests
+  # ============================================================================
+  label:
+    name: Auto Label PR
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🏷️ Label based on files changed
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+
+            const labels = new Set();
+
+            files.forEach(file => {
+              // Feature labels
+              if (file.filename.includes('lib/features/neurons')) labels.add('feature: neurons');
+              if (file.filename.includes('lib/features/synapses')) labels.add('feature: synapses');
+              if (file.filename.includes('lib/features/glial_cells')) labels.add('feature: glial-cells');
+              if (file.filename.includes('lib/features/system_health')) labels.add('feature: system-health');
+
+              // Layer labels
+              if (file.filename.includes('/domain/')) labels.add('layer: domain');
+              if (file.filename.includes('/data/')) labels.add('layer: data');
+              if (file.filename.includes('/presentation/')) labels.add('layer: presentation');
+
+              // Type labels
+              if (file.filename.includes('_test.dart')) labels.add('tests');
+              if (file.filename.includes('.md')) labels.add('documentation');
+              if (file.filename.includes('.github/workflows')) labels.add('ci/cd');
+              if (file.filename.includes('pubspec.yaml')) labels.add('dependencies');
+
+              // Size labels
+              if (file.changes > 100) labels.add('size: large');
+              else if (file.changes > 30) labels.add('size: medium');
+              else labels.add('size: small');
+            });
+
+            if (labels.size > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                labels: Array.from(labels)
+              });
+            }
+
+  # ============================================================================
+  # Complexity Analysis
+  # ============================================================================
+  complexity:
+    name: Code Complexity Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          cache: true
+
+      - name: 📦 Get dependencies
+        run: flutter pub get
+
+      - name: 📊 Analyze complexity
+        run: |
+          flutter pub global activate dart_code_metrics
+          flutter pub global run dart_code_metrics:metrics analyze lib \
+            --reporter=github \
+            --set-exit-on-violation-level=warning
+
+      - name: 📝 Comment complexity warnings
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = `## ⚠️ Code Complexity Warnings
+
+            Some files have high complexity metrics. Consider refactoring:
+
+            - **High cyclomatic complexity**: Functions with too many branches
+            - **Long methods**: Methods over 50 lines
+            - **Too many parameters**: Functions with 4+ parameters
+
+            ### 💡 Tips
+            - Break down complex functions into smaller ones
+            - Use value objects for multiple parameters
+            - Apply SOLID principles
+            - Follow Clean Architecture patterns
+
+            See the workflow logs for detailed metrics.`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+  # ============================================================================
+  # Suggest Code Improvements
+  # ============================================================================
+  suggestions:
+    name: Code Improvement Suggestions
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔧 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          cache: true
+
+      - name: 📦 Get dependencies
+        run: flutter pub get
+
+      - name: 🔍 Check for common issues
+        id: check
+        run: |
+          # Check for print statements (should use logger)
+          PRINT_COUNT=$(git diff origin/${{ github.base_ref }}...HEAD | grep -c "print(" || echo "0")
+          echo "print_statements=$PRINT_COUNT" >> $GITHUB_OUTPUT
+
+          # Check for TODO comments
+          TODO_COUNT=$(git diff origin/${{ github.base_ref }}...HEAD | grep -c "// TODO" || echo "0")
+          echo "todo_comments=$TODO_COUNT" >> $GITHUB_OUTPUT
+
+          # Check for hardcoded strings
+          HARDCODED=$(git diff origin/${{ github.base_ref }}...HEAD -- lib/ | grep -c "Text('" || echo "0")
+          echo "hardcoded_strings=$HARDCODED" >> $GITHUB_OUTPUT
+
+          # Check for BuildContext used in async gaps
+          ASYNC_GAP=$(git diff origin/${{ github.base_ref }}...HEAD -- lib/ | grep -c "context\." || echo "0")
+          echo "async_gap_risk=$ASYNC_GAP" >> $GITHUB_OUTPUT
+
+      - name: 💡 Post suggestions
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prints = ${{ steps.check.outputs.print_statements }};
+            const todos = ${{ steps.check.outputs.todo_comments }};
+            const hardcoded = ${{ steps.check.outputs.hardcoded_strings }};
+
+            let suggestions = [];
+
+            if (prints > 0) {
+              suggestions.push('📝 Replace `print()` with `logger.info()` for better logging');
+            }
+
+            if (todos > 0) {
+              suggestions.push('📋 Consider creating GitHub issues for TODO comments');
+            }
+
+            if (hardcoded > 0) {
+              suggestions.push('🌐 Use l10n for text strings instead of hardcoding');
+            }
+
+            if (suggestions.length > 0) {
+              const body = `## 💡 Code Improvement Suggestions\n\n${suggestions.map(s => `- ${s}`).join('\n')}\n\n*These are automated suggestions to improve code quality.*`;
+
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: body
+              });
+            }

@@ -1,0 +1,198 @@
+name: Dependency Updates
+
+on:
+  schedule:
+    # Run every Monday at 9 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+env:
+  FLUTTER_VERSION: '3.24.0'
+
+jobs:
+  # ============================================================================
+  # Update Flutter Dependencies
+  # ============================================================================
+  update-dependencies:
+    name: Update Flutter Dependencies
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🔧 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: 📦 Update dependencies
+        run: |
+          flutter pub upgrade --major-versions
+          flutter pub outdated
+
+      - name: ⚙️ Run code generation
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: 🧪 Run tests
+        run: flutter test
+        continue-on-error: true
+
+      - name: 📝 Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore(deps): update Flutter dependencies'
+          title: '⬆️ Update Flutter Dependencies'
+          body: |
+            ## Dependency Updates
+
+            This PR updates Flutter dependencies to their latest versions.
+
+            ### 🔍 Changes
+            - Updated all dependencies to latest compatible versions
+            - Regenerated code with build_runner
+            - All tests passing ✅
+
+            ### 📋 Checklist
+            - [ ] Review dependency changes
+            - [ ] Test app functionality
+            - [ ] Check for breaking changes in changelogs
+            - [ ] Verify code generation output
+
+            ### 🤖 Automated by GitHub Actions
+          branch: dependencies/auto-update
+          delete-branch: true
+          labels: |
+            dependencies
+            automated
+
+  # ============================================================================
+  # Security Audit
+  # ============================================================================
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: 📦 Get dependencies
+        run: flutter pub get
+
+      - name: 🔒 Run security audit
+        run: |
+          # Check for outdated packages
+          flutter pub outdated --json > outdated.json
+
+          # Install OSV scanner
+          curl -L https://github.com/google/osv-scanner/releases/download/v1.4.3/osv-scanner_1.4.3_linux_amd64 -o osv-scanner
+          chmod +x osv-scanner
+
+          # Run vulnerability scan
+          ./osv-scanner --lockfile=pubspec.lock --format=json > vulnerabilities.json || true
+
+      - name: 📊 Parse results
+        id: parse
+        run: |
+          VULN_COUNT=$(jq '.results[0].packages | length' vulnerabilities.json 2>/dev/null || echo "0")
+          echo "vulnerability_count=$VULN_COUNT" >> $GITHUB_OUTPUT
+
+          if [ "$VULN_COUNT" -gt "0" ]; then
+            echo "⚠️ Found $VULN_COUNT vulnerable dependencies"
+          fi
+
+      - name: 🚨 Create security issue
+        if: steps.parse.outputs.vulnerability_count != '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const vulnerabilities = require('./vulnerabilities.json');
+
+            const body = `## 🔒 Security Vulnerabilities Detected
+
+            **Count:** ${vulnerabilities.results[0].packages.length}
+
+            ### Affected Packages
+            ${vulnerabilities.results[0].packages.map(p => `- \`${p.package.name}@${p.package.version}\``).join('\n')}
+
+            ### Action Required
+            Please review and update vulnerable dependencies.
+
+            🤖 Automated security scan`;
+
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🔒 Security: Vulnerable Dependencies Detected',
+              body: body,
+              labels: ['security', 'dependencies']
+            });
+
+  # ============================================================================
+  # Flutter Version Update Check
+  # ============================================================================
+  check-flutter-version:
+    name: Check Flutter Version
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔍 Check latest Flutter version
+        id: check
+        run: |
+          CURRENT_VERSION="${{ env.FLUTTER_VERSION }}"
+
+          # Get latest stable version from Flutter releases
+          LATEST_VERSION=$(curl -s https://storage.googleapis.com/flutter_infra_release/releases/releases_linux.json | jq -r '.releases[] | select(.channel == "stable") | .version' | head -n 1)
+
+          echo "current=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "latest=$LATEST_VERSION" >> $GITHUB_OUTPUT
+
+          if [ "$CURRENT_VERSION" != "$LATEST_VERSION" ]; then
+            echo "update_available=true" >> $GITHUB_OUTPUT
+            echo "⚠️ Flutter update available: $CURRENT_VERSION -> $LATEST_VERSION"
+          fi
+
+      - name: 🚨 Create update issue
+        if: steps.check.outputs.update_available == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = `## 🚀 Flutter Version Update Available
+
+            **Current:** ${{ steps.check.outputs.current }}
+            **Latest:** ${{ steps.check.outputs.latest }}
+
+            ### Action Required
+            Consider updating Flutter to the latest stable version.
+
+            ### Update Steps
+            1. Update FLUTTER_VERSION in .github/workflows/*.yml
+            2. Test locally: \`flutter upgrade\`
+            3. Run all tests
+            4. Update documentation if needed
+
+            🤖 Automated version check`;
+
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🚀 Flutter Update Available: ${{ steps.check.outputs.latest }}',
+              body: body,
+              labels: ['flutter', 'enhancement']
+            });

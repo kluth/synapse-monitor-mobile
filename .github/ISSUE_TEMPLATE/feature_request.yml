@@ -1,0 +1,148 @@
+name: ✨ Feature Request
+description: Suggest a new feature or enhancement
+title: "[Feature]: "
+labels: ["enhancement", "needs-discussion"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a feature! Please provide as much detail as possible.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 🤔 Problem Statement
+      description: Is your feature request related to a problem? Please describe.
+      placeholder: I'm frustrated when...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: 💡 Proposed Solution
+      description: Describe the solution you'd like
+      placeholder: I would like to see...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 🔄 Alternatives Considered
+      description: Describe any alternative solutions or features you've considered
+      placeholder: I also considered...
+    validations:
+      required: false
+
+  - type: dropdown
+    id: feature-type
+    attributes:
+      label: 🎯 Feature Type
+      description: What type of feature is this?
+      options:
+        - New UI Component
+        - New Feature
+        - Enhancement to Existing Feature
+        - Performance Improvement
+        - Developer Experience
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 📊 Priority
+      description: How important is this feature to you?
+      options:
+        - Critical (Blocking work)
+        - High (Significantly improves workflow)
+        - Medium (Nice to have)
+        - Low (Minor improvement)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: affected-users
+    attributes:
+      label: 👥 Who Benefits?
+      description: Who would benefit from this feature?
+      multiple: true
+      options:
+        - End Users
+        - Developers
+        - System Administrators
+        - DevOps Team
+        - All Users
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-cases
+    attributes:
+      label: 📋 Use Cases
+      description: Describe specific use cases for this feature
+      placeholder: |
+        1. As a [user type], I want to [action] so that [benefit]
+        2. When [scenario], the system should [behavior]
+    validations:
+      required: true
+
+  - type: textarea
+    id: mockups
+    attributes:
+      label: 🎨 Mockups/Examples
+      description: If applicable, add mockups, screenshots, or examples
+      placeholder: Drag and drop images here or provide links
+
+  - type: textarea
+    id: technical-details
+    attributes:
+      label: 🔧 Technical Considerations
+      description: Any technical details or constraints to consider?
+      placeholder: |
+        - API changes needed
+        - Database schema changes
+        - Performance implications
+        - Security considerations
+
+  - type: checkboxes
+    id: implementation
+    attributes:
+      label: 🚀 Implementation Checklist
+      description: What needs to be done? (Optional - helps with planning)
+      options:
+        - label: Domain layer changes (entities, use cases)
+        - label: Data layer changes (models, repositories)
+        - label: Presentation layer changes (UI, providers)
+        - label: API changes needed
+        - label: Database migration needed
+        - label: Tests required
+        - label: Documentation needed
+
+  - type: dropdown
+    id: willingness
+    attributes:
+      label: 🙋 Contribution
+      description: Are you willing to contribute to implementing this feature?
+      options:
+        - Yes, I can implement this
+        - Yes, with guidance
+        - No, but I can help test
+        - No, just suggesting
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: 📎 Additional Context
+      description: Add any other context or references
+      placeholder: |
+        - Similar features in other apps
+        - Related documentation
+        - User feedback
