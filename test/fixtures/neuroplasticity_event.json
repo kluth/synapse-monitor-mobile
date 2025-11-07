@@ -1,0 +1,20 @@
+{
+  "id": "event-001",
+  "type": "self_healing",
+  "description": "Auto-restarted failed neuron",
+  "affectedComponent": "neuron-123",
+  "timestamp": "2025-11-07T12:00:00Z",
+  "outcome": "success",
+  "beforeState": {
+    "status": "failed",
+    "errorCount": 10
+  },
+  "afterState": {
+    "status": "active",
+    "errorCount": 0
+  },
+  "durationMs": 5000,
+  "metadata": {
+    "restartCount": 1
+  }
+}

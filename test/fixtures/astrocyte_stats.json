@@ -1,0 +1,15 @@
+{
+  "cacheSize": 750,
+  "capacity": 1000,
+  "hitRate": 85.5,
+  "missRate": 14.5,
+  "averageTTLMs": 300000,
+  "namespaceDistribution": {
+    "users": 350,
+    "sessions": 250,
+    "products": 150
+  },
+  "evictionCount": 125,
+  "patternMatchOperations": 450,
+  "timestamp": "2025-11-07T12:00:00Z"
+}

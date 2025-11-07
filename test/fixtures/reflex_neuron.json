@@ -1,0 +1,20 @@
+{
+  "id": "reflex-789",
+  "name": "Image Resize Function",
+  "type": "reflex",
+  "status": "active",
+  "activationThreshold": 0.5,
+  "processedSignalCount": 10000,
+  "averageProcessingTimeMs": 75,
+  "lastActiveAt": "2025-11-07T12:00:00Z",
+  "description": "Serverless image processing function",
+  "metadata": {
+    "runtime": "node18",
+    "memory": "512MB"
+  },
+  "invocationCount": 10000,
+  "coldStartCount": 150,
+  "scaleToZeroEvents": 45,
+  "responseTimeMs": 250,
+  "lastInvocationAt": "2025-11-07T11:58:00Z"
+}

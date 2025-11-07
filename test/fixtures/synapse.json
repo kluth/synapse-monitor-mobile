@@ -1,0 +1,13 @@
+{
+  "id": "synapse-001",
+  "sourceNeuronId": "neuron-123",
+  "targetNeuronId": "neuron-456",
+  "weight": 0.85,
+  "signalType": "excitatory",
+  "isMyelinated": true,
+  "usageCount": 5000,
+  "lastStrengthenedAt": "2025-11-07T10:00:00Z",
+  "isPruningCandidate": false,
+  "createdAt": "2025-11-01T08:00:00Z",
+  "transmissionSpeedMs": 15
+}

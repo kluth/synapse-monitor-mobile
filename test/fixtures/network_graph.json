@@ -1,0 +1,33 @@
+{
+  "neuronIds": ["neuron-123", "neuron-456", "neuron-789"],
+  "synapses": [
+    {
+      "id": "synapse-001",
+      "sourceNeuronId": "neuron-123",
+      "targetNeuronId": "neuron-456",
+      "weight": 0.85,
+      "signalType": "excitatory",
+      "isMyelinated": true,
+      "usageCount": 5000,
+      "lastStrengthenedAt": "2025-11-07T10:00:00Z",
+      "isPruningCandidate": false
+    },
+    {
+      "id": "synapse-002",
+      "sourceNeuronId": "neuron-456",
+      "targetNeuronId": "neuron-789",
+      "weight": 0.65,
+      "signalType": "inhibitory",
+      "isMyelinated": false,
+      "usageCount": 2500,
+      "lastStrengthenedAt": "2025-11-06T15:00:00Z",
+      "isPruningCandidate": true
+    }
+  ],
+  "depth": 3,
+  "density": 4.5,
+  "totalNeurons": 3,
+  "totalConnections": 2,
+  "hasCycles": false,
+  "timestamp": "2025-11-07T12:00:00Z"
+}

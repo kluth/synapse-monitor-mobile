@@ -1,0 +1,14 @@
+{
+  "id": "error-001",
+  "serviceName": "auth-service",
+  "error": "Connection timeout to database",
+  "timestamp": "2025-11-07T12:00:00Z",
+  "stackTrace": "at DatabaseConnection.connect()\nat AuthService.authenticate()",
+  "context": {
+    "userId": "user-123",
+    "endpoint": "/api/login"
+  },
+  "severity": "error",
+  "resolved": true,
+  "resolvedAt": "2025-11-07T12:15:00Z"
+}

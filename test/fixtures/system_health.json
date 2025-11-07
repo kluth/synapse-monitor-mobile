@@ -1,0 +1,31 @@
+{
+  "overallScore": 78.5,
+  "healthyComponents": 25,
+  "totalComponents": 30,
+  "alerts": [
+    {
+      "id": "alert-001",
+      "severity": "warning",
+      "message": "High memory usage",
+      "source": "auth-service",
+      "timestamp": "2025-11-07T11:00:00Z",
+      "isActive": true
+    }
+  ],
+  "timestamp": "2025-11-07T12:00:00Z",
+  "unhealthyComponents": 5,
+  "componentBreakdown": {
+    "neurons": {
+      "type": "neurons",
+      "healthy": 15,
+      "total": 18,
+      "healthScore": 83.3
+    },
+    "synapses": {
+      "type": "synapses",
+      "healthy": 10,
+      "total": 12,
+      "healthScore": 83.3
+    }
+  }
+}

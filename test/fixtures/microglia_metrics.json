@@ -1,0 +1,42 @@
+{
+  "errorCounts": {
+    "auth-service": 25,
+    "user-service": 15,
+    "payment-service": 10
+  },
+  "errorRate": 5.5,
+  "customMetrics": {
+    "cpu_usage": 75.5,
+    "memory_usage": 65.2,
+    "disk_io": 120.8
+  },
+  "healthChecks": {
+    "auth-service": true,
+    "user-service": true,
+    "payment-service": false
+  },
+  "alertHistory": [
+    {
+      "id": "alert-001",
+      "severity": "critical",
+      "message": "Payment service down",
+      "source": "payment-service",
+      "timestamp": "2025-11-07T11:00:00Z",
+      "isActive": true
+    },
+    {
+      "id": "alert-002",
+      "severity": "warning",
+      "message": "High error rate",
+      "source": "auth-service",
+      "timestamp": "2025-11-07T11:30:00Z",
+      "isActive": false,
+      "acknowledgedAt": "2025-11-07T11:45:00Z",
+      "acknowledgedBy": "admin@example.com"
+    }
+  ],
+  "systemHealthScore": 72.5,
+  "thresholdBreaches": 3,
+  "monitoredServices": ["auth-service", "user-service", "payment-service"],
+  "timestamp": "2025-11-07T12:00:00Z"
+}

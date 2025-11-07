@@ -1,0 +1,24 @@
+{
+  "totalRequests": 50000,
+  "requestRate": 850.5,
+  "rateLimiting": {
+    "activeRateLimits": 25,
+    "rateLimitViolations": 45,
+    "windowSizeMs": 60000,
+    "maxRequestsPerWindow": 1000
+  },
+  "routeDistribution": {
+    "/api/users": 15000,
+    "/api/products": 20000,
+    "/api/orders": 15000
+  },
+  "middlewareLatencyMs": 35,
+  "errorResponses": {
+    "400": 150,
+    "404": 200,
+    "500": 50
+  },
+  "successRate": 99.2,
+  "averageResponseTimeMs": 125,
+  "timestamp": "2025-11-07T12:00:00Z"
+}

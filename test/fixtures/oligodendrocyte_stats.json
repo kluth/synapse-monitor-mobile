@@ -1,0 +1,11 @@
+{
+  "connectionPoolSize": 45,
+  "maxConnectionPoolSize": 100,
+  "resourceCacheHits": 8500,
+  "resourceCacheMisses": 1500,
+  "memoizationHits": 350,
+  "myelinatedPathsCount": 75,
+  "poolExhaustionEvents": 3,
+  "averageConnectionAcquisitionTimeMs": 25,
+  "timestamp": "2025-11-07T12:00:00Z"
+}

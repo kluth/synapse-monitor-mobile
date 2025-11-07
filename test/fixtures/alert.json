@@ -1,0 +1,14 @@
+{
+  "id": "alert-001",
+  "severity": "critical",
+  "message": "High error rate detected in authentication service",
+  "source": "authentication-service",
+  "timestamp": "2025-11-07T12:00:00Z",
+  "isActive": true,
+  "acknowledgedAt": "2025-11-07T12:15:00Z",
+  "acknowledgedBy": "admin@example.com",
+  "metadata": {
+    "errorCount": 150,
+    "threshold": 100
+  }
+}

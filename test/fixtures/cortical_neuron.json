@@ -1,0 +1,23 @@
+{
+  "id": "cortical-456",
+  "name": "Authentication Service",
+  "type": "cortical",
+  "status": "active",
+  "activationThreshold": 0.85,
+  "processedSignalCount": 5000,
+  "averageProcessingTimeMs": 150,
+  "lastActiveAt": "2025-11-07T12:00:00Z",
+  "description": "Stateful auth service with session management",
+  "metadata": {
+    "version": "2.1.0",
+    "region": "us-east-1"
+  },
+  "stateSize": 2048576,
+  "stateChanges": 342,
+  "uptimeMs": 7200000,
+  "restartCount": 2,
+  "currentState": {
+    "activeSessions": 127,
+    "cacheSize": 1024
+  }
+}
