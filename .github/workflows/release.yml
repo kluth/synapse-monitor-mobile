@@ -22,6 +22,7 @@ jobs:
   create-release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: write
     outputs:
@@ -95,6 +96,7 @@ jobs:
   build-android:
     name: Build Android Release
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: create-release
 
     steps:
@@ -146,6 +148,7 @@ jobs:
   build-web:
     name: Build Web Release
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: create-release
 
     steps:

@@ -11,6 +11,7 @@ jobs:
   review:
     name: Automated Code Review
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       pull-requests: write
       contents: read
@@ -131,6 +132,7 @@ jobs:
   label:
     name: Auto Label PR
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       pull-requests: write
 
@@ -191,6 +193,7 @@ jobs:
   complexity:
     name: Code Complexity Analysis
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: 📥 Checkout repository
@@ -247,6 +250,7 @@ jobs:
   suggestions:
     name: Code Improvement Suggestions
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       pull-requests: write
 

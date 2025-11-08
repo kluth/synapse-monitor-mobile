@@ -16,6 +16,7 @@ jobs:
   update-dependencies:
     name: Update Flutter Dependencies
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: 📥 Checkout repository
@@ -43,84 +44,33 @@ jobs:
         continue-on-error: true
 
       - name: 📝 Create Pull Request
-        uses: actions/github-script@v7
+        uses: peter-evans/create-pull-request@v5
         with:
-          script: |
-            const { execSync } = require('child_process');
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore(deps): update Flutter dependencies'
+          title: '⬆️ Update Flutter Dependencies'
+          body: |
+            ## Dependency Updates
 
-            // Configure git
-            execSync('git config user.name "github-actions[bot]"');
-            execSync('git config user.email "github-actions[bot]@users.noreply.github.com"');
+            This PR updates Flutter dependencies to their latest versions.
 
-            // Create and switch to branch
-            const branchName = 'dependencies/auto-update';
-            try {
-              execSync(`git checkout -b ${branchName}`);
-            } catch (e) {
-              execSync(`git checkout ${branchName}`);
-            }
+            ### 🔍 Changes
+            - Updated all dependencies to latest compatible versions
+            - Regenerated code with build_runner
+            - All tests passing ✅
 
-            // Stage and commit changes
-            execSync('git add pubspec.yaml pubspec.lock');
-            try {
-              execSync('git commit -m "chore(deps): update Flutter dependencies"');
+            ### 📋 Checklist
+            - [ ] Review dependency changes
+            - [ ] Test app functionality
+            - [ ] Check for breaking changes in changelogs
+            - [ ] Verify code generation output
 
-              // Push branch
-              execSync(`git push -f origin ${branchName}`);
-
-              // Create PR
-              const { data: prs } = await github.rest.pulls.list({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                head: `${context.repo.owner}:${branchName}`,
-                state: 'open'
-              });
-
-              if (prs.length === 0) {
-                await github.rest.pulls.create({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  title: '⬆️ Update Flutter Dependencies',
-                  head: branchName,
-                  base: 'main',
-                  body: `## Dependency Updates
-
-This PR updates Flutter dependencies to their latest versions.
-
-### 🔍 Changes
-- Updated all dependencies to latest compatible versions
-- Regenerated code with build_runner
-- All tests passing ✅
-
-### 📋 Checklist
-- [ ] Review dependency changes
-- [ ] Test app functionality
-- [ ] Check for breaking changes in changelogs
-- [ ] Verify code generation output
-
-### 🤖 Automated by GitHub Actions`
-                });
-
-                // Add labels
-                const { data: pr } = await github.rest.pulls.list({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  head: `${context.repo.owner}:${branchName}`,
-                  state: 'open'
-                });
-
-                if (pr.length > 0) {
-                  await github.rest.issues.addLabels({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    issue_number: pr[0].number,
-                    labels: ['dependencies', 'automated']
-                  });
-                }
-              }
-            } catch (e) {
-              console.log('No changes to commit or PR already exists');
-            }
+            ### 🤖 Automated by GitHub Actions
+          branch: dependencies/auto-update
+          delete-branch: true
+          labels: |
+            dependencies
+            automated
 
   # ============================================================================
   # Security Audit
@@ -128,6 +78,7 @@ This PR updates Flutter dependencies to their latest versions.
   security-audit:
     name: Security Audit
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: 📥 Checkout repository
@@ -198,6 +149,7 @@ This PR updates Flutter dependencies to their latest versions.
   check-flutter-version:
     name: Check Flutter Version
     runs-on: ubuntu-latest
+    timeout-minutes: 5
 
     steps:
       - name: 📥 Checkout repository
